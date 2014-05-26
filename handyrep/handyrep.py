@@ -296,7 +296,7 @@ class HandyRep(object):
         for someserver, servdetails in self.servers.iteritems():
             if servdetails["enabled"]:
                 if servdetails["role"] == "master":
-                    if not self.verify_master(someserver):
+                    if not self.verify_master():
                         allgood = False
                 else:
                     if not self.verify_replica(someserver):
@@ -1050,9 +1050,10 @@ class HandyRep(object):
         for replica in replicas:
             if succeeded(self.check_replica(replica)):
                 if succeeded(self.promote(replica)):
+					newmaster = replica
                     # if remastering, attempt to remaster
                     if remaster:
-                        for servername, servinfo in self.servers.iteritems():
+                        for servername, servinfo in self.servers.iteritems():						    
                             if servinfo["role"] == "replica" and servinfo["enabled"]:
                                 # don't check result, we do that in
                                 # the remaster procedure
@@ -1133,7 +1134,7 @@ class HandyRep(object):
                             if servinfo["role"] == "replica" and servinfo["enabled"]:
                                 # don't check result, we do that in
                                 # the remaster procedure
-                                self.remaster(servname, newmaster)
+                                self.remaster(servername, newmaster)
                     # fail over connections:
                     if succeeded(self.connection_failover(newmaster)):
                         # run post-failover scripts

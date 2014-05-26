@@ -28,7 +28,7 @@ class haproxy_update(HandyRepPlugin):
 			# upload_template to haproxy server		
 			self.push_template(haproxyserv, haproxytemp, myconf["hap_pg_cfg"], haproxy_cfg, new_owner=None, file_mode=755)
 			# update the haproxy memory configuration
-				updated = self.run_as_root(haproxyserv, [haproxycmd,])
+			updated = self.run_as_root(haproxyserv, [haproxycmd,])
         return updated
 
     def test(self):
