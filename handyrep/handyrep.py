@@ -10,7 +10,7 @@ import logging
 import time
 import importlib
 from plugins.failplugin import failplugin
-from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr, get_nested_val, notnone, notfalse
+from lib.misc_utils import ts_string, string_ts, now_string, succeeded, failed, return_dict, exstr, get_nested_val, notnone, notfalse, lock_fabric, fabric_unlock_all
 import psycopg2
 import psycopg2.extensions
 import os
@@ -1372,7 +1372,11 @@ class HandyRep(object):
     def clone(self, replicaserver, reclone=False, clonefrom=None):
         # use config master if not supplied
         if clonefrom:
-            clomaster = clonefrom
+            cloprops = self.servers[clonefrom]
+            if cloprops["enabled"] and cloprops["status_no"] < 4:
+                clomaster = clonefrom
+            else:
+                return return_dict(False, "you may not clone from a server which is non-operational")
         else:
             clomaster = self.get_master_name()
         # abort if this is the master
@@ -1629,6 +1633,7 @@ class HandyRep(object):
             recparam["replica_connection"] = "%s password=%s" % (recparam["replica_connection"],self.conf["passwords"]["replication_pass"])
         
         # set up fabric
+        lock_fabric(True)
         env.key_filename = self.servers[replicaserver]["ssh_key"]
         env.user = self.servers[replicaserver]["ssh_user"]
         env.disable_known_hosts = True
@@ -1640,11 +1645,11 @@ class HandyRep(object):
             sudo( "chmod 700 %s" % (servconf["replica_conf"] ), quiet=True)
             
         except Exception as ex:
-            disconnect_all()
+            self.disconnect_and_unlock()
             self.status_update(replicaserver, "warning", "could not change configuration file")
             return self.return_log(False, "could not push new replication configuration: %s" % exstr(ex))
         
-        disconnect_all()
+        self.disconnect_and_unlock()
 
         # restart the replica if it was running
         if self.is_available(replicaserver):
@@ -1893,6 +1898,7 @@ class HandyRep(object):
 
     def test_ssh(self, servername):
         try:
+            lock_fabric()
             env.key_filename = self.servers[servername]["ssh_key"]
             env.user = self.servers[servername]["ssh_user"]
             env.disable_known_hosts = True
@@ -1903,11 +1909,12 @@ class HandyRep(object):
             return False
 
         result = testit.succeeded
-        disconnect_all()
+        self.disconnect_and_unlock()
         return result
 
     def test_ssh_newhost(self, hostname, ssh_key, ssh_user ):
         try:
+            lock_fabric()
             env.key_filename = ssh_key
             env.user = ssh_user
             env.disable_known_hosts = True
@@ -1919,7 +1926,7 @@ class HandyRep(object):
             return False
 
         result = testit.succeeded
-        disconnect_all()
+        self.disconnect_and_unlock()
         return result
 
     def authenticate(self, username, userpass, funcname):
@@ -1935,4 +1942,8 @@ class HandyRep(object):
     def authenticate_bool(self, username, userpass, funcname):
         # simple boolean response to the above for the web daemon
         return succeeded(self.authenticate(username, userpass, funcname))
-        
+
+    def disconnect_and_unlock(self):
+        disconnect_all()
+        lock_fabric(False)
+        return True

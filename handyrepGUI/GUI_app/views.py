@@ -117,31 +117,41 @@ def function_detail(server_name, function):
         form = FunctionForm()
         if form.validate_on_submit():
             for params in function_info["params"]:
-                if params["param_name"] == "servername":
+                if params["param_name"] == "servername" or params["param_name"] == "replicaserver":
                         continue
                 if params["required"] and getattr(form, 'textdata').data == "":
                     message = "Please enter the required field."
                     return render_template("function_data.html", status=status, info=server_info, form=form, function = function_info, message=message)
-                if not getattr(form, 'textdata').data == "":
-                        if params["param_default"] and str(getattr(form, 'textdata').raw_data[0]).lower() == params["param_default"].lower() :#Don't want to send blank data:
-                            pass
-                        else:
-                            function_parameters[params['param_name']] = str(getattr(form, 'textdata').raw_data[0])
-                elif params['param_type'] == 'bool':
+                if params['param_type'] == 'bool':
                     if not getattr(form, 'true_false').data == params["param_default"] :#Don't want to send blank data:
                         function_parameters[params['param_name']] = getattr(form, 'true_false').data
+                elif not getattr(form, 'textdata').data == "":
+                    if params["param_default"] and str(getattr(form, 'textdata').raw_data[0]).lower() == params["param_default"].lower() :#Don't want to send blank data:
+                        pass
+                    else:
+                        function_parameters[params['param_name']] = str(getattr(form, 'textdata').raw_data[0])
             return redirect(url_for("results", server_name = server_name, function=function))
         for params in function_info["params"]:
             if params["param_name"] == "servername":
                 function_parameters["servername"] = server_name
+            elif params["param_name"] == "replicaserver":
+                function_parameters["replicaserver"] = server_name
             else:
                 if params["param_default"]:
                     if params["param_type"] == "text":
-                        getattr(form, 'textdata').data = params["param_default"]
+                        if params["param_default"] == "current master":
+                            url_to_send = "{address}/get_master_name".format(address=handyrep_address)
+                            r = requests.get(url_to_send, auth=(username, password))
+                            getattr(form, 'textdata').data = r.json()
+                        else:
+                            getattr(form, 'textdata').data = params["param_default"]
                     if params["param_type"] == "bool":
                         getattr(form, 'true_false').data = params["param_default"]
-    elif len(function_info["params"]) == 1 and function_info.get("params")[0].get("param_name") == "servername":
-        function_parameters["servername"] = server_name
+    elif len(function_info["params"]) == 1 and (function_info.get("params")[0].get("param_name") == "servername" or function_info.get("params")[0].get("param_name") == "newmaster"):
+        if function_info.get("params")[0].get("param_name") == "newmaster":
+            function_parameters["newmaster"] = server_name
+        else:
+            function_parameters["servername"] = server_name
         return redirect(url_for("results", server_name = server_name, function=function))
     return render_template("function_data.html", status=status, info=server_info, form=form, function = function_info)
 
@@ -188,9 +198,9 @@ def cluster_function_detail(function):
 def results(server_name, function):
     global function_parameters
     if handyrep_address is None or username is None or password is None:
+        function_parameters = {}
         return redirect(url_for("login"))
-    #status information
-    status = get_status()
+
     print function_parameters
     if server_name == "cluster":
         server_info = None
@@ -205,10 +215,13 @@ def results(server_name, function):
         x = requests.get(url_to_send, params=function_parameters, auth=(username, password))
     if not x.status_code == requests.codes.OK:
         if x.status_code == 500:
+            function_parameters = {}
             abort(500)
         result_to_send = "Parameters were not entered correctly. Please renter them. Remember, handyrep is case sensitive."
     else:
         result_to_send = x.json()
+        #status information
+    status = get_status()
     function_parameters = {}
     return render_template("results.html", status=status, info=server_info, results=function_parameters, result_to_send=result_to_send, function = function_info)
 

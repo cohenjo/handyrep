@@ -163,14 +163,14 @@ Functions = {
 
 
     'promote':{'function_name': 'promote', 'description': 'Promotes the designated replica to become a master or standalone. Does '
-        'NOT do other failover procedures. Does not prevent creating two masters.', 'short_description': 'Promote replica', 'params': [{'param_name': 'severname',
+        'NOT do other failover procedures. Does not prevent creating two masters.', 'short_description': 'Promote replica', 'params': [{'param_name': 'newmaster',
         'param_default': None, 'param_description': 'The name of the server to start.', 'param_type': 'text','required': True, 'param_options': None}],
                'result_information': 'This function returns data related to the success '
         'of the promotion of the server.<h3>result</h3><h4 style="padding-left:1em">SUCCESS</h4><p style="padding-left:2em">The server has been promoted.</p><h4 style="padding-left:1em">FAIL</h4><p style="padding-left:2em">The server could not be promoted, check details.</p>'},
 
     'manual_failover':{'function_name': 'manual_failover', 'description': 'Fail over to a new master, presumably for planned downtimes, '
         'maintenance, or server migrations.', 'short_description': 'Fail over to new master', 'params': [{'param_name': 'newmaster', 'param_default': None, 'param_description': 'Server to fail '
-        'over to. If not supplied, use the same master selection process as auto-failover.', 'param_type': 'text',
+        'over to. If not supplied, use the same master selection process as auto-failover.', 'param_type': 'text', 'required': False,
         'param_options': None}, {'param_name': 'remaster', 'param_default': None,'param_description': 'Whether or not to remaster '
         'all other servers to replicate from the new master. If not supplied, setting in handyrep.conf is used.', 'param_type': 'bool',
         'required': False, 'param_options': None}], 'result_information': 'This function returns data related to the success '
