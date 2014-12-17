@@ -1050,7 +1050,7 @@ class HandyRep(object):
         for replica in replicas:
             if succeeded(self.check_replica(replica)):
                 if succeeded(self.promote(replica)):
-					newmaster = replica
+                    newmaster = replica
                     # if remastering, attempt to remaster
                     if remaster:
                         for servername, servinfo in self.servers.iteritems():						    
